@@ -9,90 +9,30 @@
 #include "sensor_msgs/Image.h"
 #include "maelstrom/TagList.h"
 
+bool clear_path = true;
 
-void tagListCallback(const maelstrom::TagList::ConstPtr& tagList) {
-
-}
-
-void bumperCallback(const kobuki_msgs::BumperEvent::ConstPtr& bumperEvent) {
-
-}
-
-class MaelstromMapHelper {
-private:
-  ros::NodeHandle n_;
-  ros::Subscriber tagSub_;
-  ros::Subscriber bumperSub_;
-  ros::Publisher mover_;
-  bool pathIsClear_;
-
-public:
-  MaelstromMapHelper() {
-    ROS_INFO("MaelstromMapHelper Initialized");
-    // setup publishers and subscribers
-    tagSub_ = n_.subscribe("results", 1000, tagListCallback);
-    mover_ = n_.advertise<geometry_msgs::Twist>("cmd_vel_mux/input/navi", 100);
-    bumperSub_ = n_.subscribe("mobile_base/events/bumper", 1000, bumperCallback);
-    ros::spin();
-    zigzag();
-  }
-
-  bool pathIsClear() {
-    return pathIsClear_;
-  }
-
-  bool setPathClear(bool new_val) {
-    pathIsClear_ = new_val;
-  }
-
-  zigzag() {
-    int count = 0;
-    ros::Rate loop_rate(5);
-    while(ros::ok() && pathIsClear()) {
-      geometry_msgs::Twist msg;
-      msg.linear.x = 0.01;
-      msg.angular.z = 0;
-      mover_.publish(msg);
-      loop_rate.sleep();
-      ++count;
-      ros::spinOnce();
+void bumperEvent(const kobuki_msgs::BumperEventConstPtr msg) {
+    if(msg->state == kobuki_msgs::BumperEvent::PRESSED) {
+        clear_path = false;
     }
-  }
-};
-
-class MaelstromMapHelper {
-private:
-  static ros::NodeHandle n_;
-  static ros::Subscriber tagSub_;
-  static ros::Publisher mover_;
-  static bool pathIsClear_;
-public:
-  init() {
-    ROS_INFO("Initializing");
-    MaelstromMapHelper::tagSub_ = MaelstromMapHelper::n_.subscribe("results", 1000, );
-    MaelstromMapHelper::mover_ = MaelstromMapHelper::n_.advertise<geometry_msgs::Twist>("cmd_vel_mux/input/navi", 100);
-    MaelstromMapHelper::bumperSub_ = MaelstromMapHelper::n_.subscribe("mobile_base/events/bumper", 1000, );
-    ros::spin();
-    MaelstromMapHelper::zigzag();
-  }
-
-  zigzag() {
-    int count = 0;
-    ros::Rate loop_rate(5);
-    while(ros::ok() && pathIsClear()) {
-      geometry_msgs::Twist msg;
-      msg.linear.x - 0.01;
-      msg.angular.z = 0;
-      mover_.publish(msg);
-      loop_rate.sleep();
-      ++count;
-      ros::
-    }
-  }
 }
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "maelstrom_node");
-  MaelstromMapHelper::init();
-  return 0;
+    ros::init(argc, argv, "maelstrom_node");
+    ROS_INFO("initializing");
+    ros::NodeHandle n;
+    ros::Publisher mover = n.advertise<geometry_msgs::Twist>("cmd_vel_mux/input/navi", 1000);
+    ros::Subscriber bumperSub = n.subscribe("mobile_base/events/bumper", 1000, bumperEvent);
+    while(ros::ok() && clear_path) {
+        geometry_msgs::Twist msg;
+        msg.linear.x = 0.1;
+        msg.angular.z = 0;
+        mover.publish(msg);
+    }
+    if (!clear_path) {
+        geometry_msgs::Twist msg;
+        msg.linear.x = -0.1;
+        mover.publish(msg);
+    }
+    ros::spin();
 }
