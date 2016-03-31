@@ -8,7 +8,6 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   sensor_msgs
   kobuki_msgs
-  cv_bridge
   image_transport
   roscpp
   std_msgs
